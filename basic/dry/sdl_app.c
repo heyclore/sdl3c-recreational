@@ -27,6 +27,7 @@ SDL_AppResult SDL_AppInit(void **appstate, int argc, char *argv[])
   SDL_memset(surface->pixels, 6, surface->h * surface->pitch);
   SDL_UnlockSurface(surface);
   SDL_UpdateWindowSurface(window);
+  initMessage();
 
   return SDL_APP_CONTINUE;
 }

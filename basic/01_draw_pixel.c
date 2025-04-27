@@ -3,6 +3,10 @@
 
 int q;
 
+void initMessage() {
+    printf("\n\n=== %s ===\n\n", "CLICK ON SCREEN TO DRAW A PIXEL!!!");
+}
+
 SDL_AppResult SDL_AppIterate(void *appstate)
 {
   //printf("%d\n", q);
@@ -42,8 +46,9 @@ SDL_AppResult SDL_AppEvent(void *appstate, SDL_Event *event)
     return SDL_APP_SUCCESS;
   }
   if (event->type == SDL_EVENT_MOUSE_BUTTON_DOWN) {
-    SetPixel(surface, x, y, 128, 0, 128);
+    SetPixel(surface, x, y, 255, 0, 0);
     SDL_UpdateWindowSurface(window);
   }
   return SDL_APP_CONTINUE;
 }
+
