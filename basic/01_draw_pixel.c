@@ -1,31 +1,21 @@
 #include "dry/sdl_app.h"
 #include <stdio.h>
 
-int j;
+int q;
 
 SDL_AppResult SDL_AppIterate(void *appstate)
 {
-  //printf("%d\n", j);
-  //SDL_Delay(1000);
-  if (j < 10){
-    j++;
-  }
-  if (j == 3){
-    printf("%d\n", 1);
-  }
-
+  //printf("%d\n", q);
+  SDL_Delay(666);
   return SDL_APP_CONTINUE;
 }
 
 void SetPixel(SDL_Surface* surface, int x, int y, uint8_t r, uint8_t g, uint8_t b){
-  printf("%d\n", x);
 
   SDL_LockSurface(surface);
   uint8_t* pixelArray = (uint8_t*)surface->pixels;
 
-  //uint8_t red = 128, green = 0, blue = 128, alpha = 0;
-
-  //// Example of drawing a horizontal line at y = 300
+  // Example of drawing a horizontal line at y = 300
   //int xStart = 10, xEnd = 70, yy = 30;
 
   ///*
@@ -36,12 +26,8 @@ void SetPixel(SDL_Surface* surface, int x, int y, uint8_t r, uint8_t g, uint8_t 
   //   pixel[2] = red;
   //   pixel[3] = alpha;
   //   }
-  //   */
-  uint8_t *pixel = pixelArray + (y * surface->w + x) * 4;
-  pixel[0] = b;
-  pixel[1] = g;
-  pixel[2] = r;
-  pixel[3] = 0;
+  uint32_t pixelValue = (r << 16) | (g << 8) | (b);
+  *((uint32_t*)(pixelArray + (y * surface->w + x) * 4)) = pixelValue;
 
   SDL_UnlockSurface(surface);
 }
@@ -56,7 +42,7 @@ SDL_AppResult SDL_AppEvent(void *appstate, SDL_Event *event)
     return SDL_APP_SUCCESS;
   }
   if (event->type == SDL_EVENT_MOUSE_BUTTON_DOWN) {
-    SetPixel(surface, x, y, 255, 0, 0);
+    SetPixel(surface, x, y, 128, 0, 128);
     SDL_UpdateWindowSurface(window);
   }
   return SDL_APP_CONTINUE;
