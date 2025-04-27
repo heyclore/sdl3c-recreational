@@ -17,12 +17,11 @@ SDL_AppResult SDL_AppIterate(void *appstate)
 void SetPixel(SDL_Surface* surface, int x, int y, uint8_t r, uint8_t g, uint8_t b){
 
   SDL_LockSurface(surface);
-  uint8_t* pixelArray = (uint8_t*)surface->pixels;
 
   // Example of drawing a horizontal line at y = 300
   //int xStart = 10, xEnd = 70, yy = 30;
 
-  ///*
+  //   uint8_t* pixelArray = (uint8_t*)surface->pixels;
   //   for (int r = xStart; r < xEnd; r++) {
   //   uint8_t *pixel = pixelArray + (yy * surface->w + r) * 4;
   //   pixel[0] = blue;
@@ -30,8 +29,19 @@ void SetPixel(SDL_Surface* surface, int x, int y, uint8_t r, uint8_t g, uint8_t 
   //   pixel[2] = red;
   //   pixel[3] = alpha;
   //   }
-  uint32_t pixelValue = (r << 16) | (g << 8) | (b);
-  *((uint32_t*)(pixelArray + (y * surface->w + x) * 4)) = pixelValue;
+
+  //uint8_t* pixelArray = (uint8_t*)surface->pixels;
+  //uint32_t pixelValue = (r << 16) | (g << 8) | (b);
+  //*((uint32_t*)(pixelArray + (y * surface->w + x) * 4)) = pixelValue;
+
+  //uint32_t* pixels = (uint32_t*)surface->pixels;
+  //uint32_t pixelValue = (r << 16) | (g << 8) | (b);
+  //pixels[y * surface->w + x] = pixelValue;
+
+  //uint32_t pixelValue = (r << 16) | (g << 8) | (b);
+  //*((uint32_t*)((uint8_t*)surface->pixels + (y * surface->w + x) * 4)) = pixelValue;
+
+  ((uint32_t*)surface->pixels)[y * surface->w + x] = (r << 16) | (g << 8) | b;
 
   SDL_UnlockSurface(surface);
 }
