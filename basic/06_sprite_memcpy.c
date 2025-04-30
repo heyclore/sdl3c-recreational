@@ -8,7 +8,8 @@
 int q;
 
 void initMessage() {
-  printf("\n\n=== %s ===\n\n", "CLICK ON SCREEN & SEE THE IMAGE!!!");
+  printf("\n\n=== %s ===\n", "CLICK ON SCREEN & SEE THE IMAGE!!!");
+  printf("=== %s ===\n\n", "CLICK ANY KEY TO SCREEN RESET!!!");
 }
 
 SDL_AppResult SDL_AppIterate(void *appstate)
@@ -44,11 +45,11 @@ const FooEntry fooEntries[] = {
 const int numEntries = sizeof(fooEntries) / sizeof(fooEntries[0]);
 
 void Memcpy(SDL_Surface *surface, int x, int y, uint32_t color, int pos_x, int pos_y) {
-  Uint32 *pixels = (Uint32 *)surface->pixels;
   if ((pos_x + x * BLOCK_SIZE + BLOCK_SIZE) > surface->w || (pos_y + y * BLOCK_SIZE + BLOCK_SIZE) > surface->h) {
     printf("Out of bounds! Skipping draw at (%d, %d)\n", x, y);
     return;
   }
+  Uint32 *pixels = (Uint32 *)surface->pixels;
   Uint32 *targetPixels = &pixels[(pos_y + y  *BLOCK_SIZE) * surface->w + (pos_x + x * BLOCK_SIZE)];
 
   // Create a block of memory filled with the color
@@ -72,6 +73,10 @@ SDL_AppResult SDL_AppEvent(void *appstate, SDL_Event *event)
 
   if (event->type == SDL_EVENT_QUIT) {
     return SDL_APP_SUCCESS;
+  }
+  if (event->type == SDL_EVENT_KEY_DOWN) {
+    SDL_memset(surface->pixels, (0x000000 & 0xFF), surface->w * surface->h * 4);
+    SDL_UpdateWindowSurface(window);
   }
   if (event->type == SDL_EVENT_MOUSE_BUTTON_DOWN) {
     /*
