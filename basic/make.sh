@@ -1,8 +1,15 @@
 main='06_sprite_memcpy.c'
 exe='exe.exe'
 
-gcc $main dry/sdl_app.c -o $exe -I ~/apps/pac/sdl3/include/ -L ~/apps/pac/sdl3/lib/ -lSDL3
-#./$exe
+gcc $main dry/sdl_app.c -o $exe \
+    -I ~/apps/git/SDL/sdl3/include/ \
+    -L ~/apps/git/SDL/sdl3/lib/ \
+    -Wl,-rpath=$HOME/apps/git/SDL/sdl3/lib \
+    -I ~/apps/git/SDL_image/SDL_image/include/ \
+    -L ~/apps/git/SDL_image/SDL_image/lib/ \
+    -Wl,-rpath=$HOME/apps/git/SDL_image/SDL_image/lib \
+    -lSDL3 -lSDL3_image
+
 if [ $? -eq 0 ]; then
     ./$exe
 fi
