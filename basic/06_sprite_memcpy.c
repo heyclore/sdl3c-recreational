@@ -91,6 +91,7 @@ SDL_AppResult SDL_AppEvent(void *appstate, SDL_Event *event)
     }
     }
     */
+    const SDL_Rect rect = {(int)x, (int)y, 0, 200};
     for (int i = 0; i < numEntries; ++i) {
       const FooEntry *entry = &fooEntries[i];
       const int *p = &foo[entry->startIndex * 2];
@@ -102,7 +103,8 @@ SDL_AppResult SDL_AppEvent(void *appstate, SDL_Event *event)
     }
 
 
-    SDL_UpdateWindowSurface(window);
+    //SDL_UpdateWindowSurface(window);
+    SDL_UpdateWindowSurfaceRects(window, &rect, 1);
   }
   return SDL_APP_CONTINUE;
 }

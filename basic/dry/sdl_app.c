@@ -6,6 +6,25 @@ SDL_Surface *surface;
 
 #define WINDOW_WIDTH 640
 #define WINDOW_HEIGHT 480
+#define MAX_SURFACES 10
+
+SDL_Surface *surfaceList[MAX_SURFACES];
+int surfaceCount = 0;
+
+void addSurfaceToList(SDL_Surface *surface) {
+  if (surfaceCount < MAX_SURFACES) {
+    surfaceList[surfaceCount++] = surface;
+  } else {
+    SDL_LogError(SDL_LOG_CATEGORY_APPLICATION, "Too many surfaces!  Maximum is %d\n", MAX_SURFACES);
+  }
+}
+
+void freeSurfaceList() {
+  for (int i = 0; i < surfaceCount; ++i) {
+    SDL_DestroySurface(surfaceList[i]);
+    surfaceList[i] = NULL;
+  }
+}
 
 SDL_AppResult SDL_AppInit(void **appstate, int argc, char *argv[])
 {
@@ -28,13 +47,15 @@ SDL_AppResult SDL_AppInit(void **appstate, int argc, char *argv[])
   SDL_UnlockSurface(surface);
   SDL_UpdateWindowSurface(window);
   initMessage();
+  addSurfaceToList(surface);
 
   return SDL_APP_CONTINUE;
 }
 
-
 void SDL_AppQuit(void *appstate, SDL_AppResult result)
 {
+  freeSurfaceList();
   SDL_DestroyWindow(window);
 }
+
 
