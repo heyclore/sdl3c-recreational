@@ -6,6 +6,7 @@
 #include <SDL3/SDL_video.h>
 #include <SDL3/SDL_surface.h>
 #include <SDL3/SDL_mouse.h>
+#include <SDL3/SDL_keycode.h>
 #include <SDL3_image/SDL_image.h>
 #include <stdio.h>
 #include <stdlib.h>

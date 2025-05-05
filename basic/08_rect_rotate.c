@@ -3,8 +3,7 @@
 int q;
 
 void initMessage() {
-  printf("\n\n=== %s ===\n", "CLICK ON SCREEN & SEE THE IMAGE!!!");
-  printf("=== %s ===\n\n", "CLICK ANY KEY TO SCREEN RESET!!!");
+  printf("\n\n=== %s ===\n", "PRESS [W] [A] [S] [D] KEY!!!");
 }
 
 SDL_AppResult SDL_AppIterate(void *appstate){
@@ -54,14 +53,10 @@ void rotateZ_around(Point3D *v, float cos_angle, float sin_angle, Point3D center
 
 
 
-//Point3D points[] = {{10, 10, 0}, {20, 10, 0}, {10, 20, 0}, {20, 20, 0}};
-//Point3D points[] = {{100, 100, 0}, {300, 100, 0}, {300, 300, 0}, {100, 300, 0}};
-//Point3D center = {200, 200, 0};
 Point3D points[] = {{100, 100, 0}, {300, 100, 0}, {300, 300, 0}, {100, 300, 0}};
 Point3D center;
 const char* pts[] = {"A", "B", "C", "D"};
-//float angle = PI / 6.0f; // 30 degrees
-float angle = PI / 18.0f; // 10 degrees
+float angle = PI / 6.0f; // 30 degrees
 int num_points = sizeof(points) / sizeof(Point3D);
 float cos_angle;
 float sin_angle;
@@ -125,16 +120,67 @@ void draw_line(int x0, int y0, int x1, int y1, SDL_Surface *surface) {
   }
 }
 
+void rotate(int *num_points, Point3D *points, SDL_Surface *surface){
+  //void rotate(int *num_points, Point3D *points, SDL_Surface *surface, float angle, Point3D center) {
+  SDL_memset(surface->pixels, (0x000000 & 0xFF), surface->w * surface->h * 4);
+  for (int i = 0; i < *num_points; i++) {
+    int next = (i + 1) % *num_points;
+
+    if ((int)(points[i].y + 0.5f) == (int)(points[next].y + 0.5f)) {
+
+      int x_start = (int)points[i].x;
+      int x_end   = (int)points[next].x;
+      int y       = (int)points[i].y;
+
+      if (x_end < x_start) {
+        int temp = x_start;
+        x_start = x_end;
+        x_end = temp;
+      }
+
+      int line_length = x_end - x_start + 1;
+
+      Uint32 *pixels = (Uint32 *)surface->pixels;
+      Uint32 *targetPixels = &pixels[y * surface->w + x_start];
+
+      Uint32 colorBlock[line_length];
+      for (int j = 0; j < line_length; ++j) {
+        colorBlock[j] = COLOR;
+      }
+
+      SDL_memcpy(targetPixels, colorBlock, line_length * sizeof(Uint32));
+
+    } else if ((int)(points[i].x + 0.5f) == (int)(points[next].x + 0.5f)) {
+      int x = (int)points[i].x;
+      int y_start = (int)points[i].y;
+      int y_end   = (int)points[next].y;
+
+      if (y_end < y_start) {
+        int temp = y_start;
+        y_start = y_end;
+        y_end = temp;
+      }
+
+      Uint32 *pixels = (Uint32 *)surface->pixels;
+
+      for (int y = y_start; y <= y_end; ++y) {
+        pixels[y * surface->w + x] = COLOR;
+      }
+    } else {
+      //draw diagonal
+      draw_line((int)points[i].x, (int)points[i].y, (int)points[next].x, (int)points[next].y, surface);
+    }
+  }
+  SDL_UpdateWindowSurface(window);
+}
 SDL_AppResult SDL_AppEvent(void *appstate, SDL_Event *event)
 {
   if (event->type == SDL_EVENT_QUIT) {
     return SDL_APP_SUCCESS;
   }
-  if (event->type == SDL_EVENT_KEY_DOWN) {
-    SDL_memset(surface->pixels, (0x000000 & 0xFF), surface->w * surface->h * 4);
-    SDL_UpdateWindowSurface(window);
-  }
   if (event->type == SDL_EVENT_MOUSE_BUTTON_DOWN) {
+  }
+  if (event->type == SDL_EVENT_KEY_DOWN) {
     if(q==0){
       center.x = abs(points[0].x - points[1].x);
       center.y = abs(points[1].y - points[2].y);
@@ -149,70 +195,69 @@ SDL_AppResult SDL_AppEvent(void *appstate, SDL_Event *event)
             (int)(points[i].y + 0.5f));
       }
     }
-    printf("Rotated Points:\n");
-    for (int i = 0; i < num_points; i++) {
-      rotateX_around(&points[i], cos_angle, sin_angle, center);
-      //rotateY_around(&points[i], cos_angle, sin_angle, center);
-      //rotateZ_around(&points[i], cos_angle, sin_angle, center);
-      printf("%c: (%d, %d)\n",
-          'A' + i,
-          (int)(points[i].x + 0.5f),
-          (int)(points[i].y + 0.5f));
-    }
-    SDL_memset(surface->pixels, (0x000000 & 0xFF), surface->w * surface->h * 4);
-    for (int i = 0; i < num_points; i++) {
-      int next = (i + 1) % num_points;
-
-      if ((int)(points[i].y + 0.5f) == (int)(points[next].y + 0.5f)) {
-
-        int x_start = (int)points[i].x;
-        int x_end   = (int)points[next].x;
-        int y       = (int)points[i].y;
-
-        if (x_end < x_start) {
-          int temp = x_start;
-          x_start = x_end;
-          x_end = temp;
-        }
-
-        int line_length = x_end - x_start + 1;
-
-        Uint32 *pixels = (Uint32 *)surface->pixels;
-        Uint32 *targetPixels = &pixels[y * surface->w + x_start];
-
-        Uint32 colorBlock[line_length];
-        for (int j = 0; j < line_length; ++j) {
-          colorBlock[j] = COLOR;
-        }
-
-        SDL_memcpy(targetPixels, colorBlock, line_length * sizeof(Uint32));
-
-      } else if ((int)(points[i].x + 0.5f) == (int)(points[next].x + 0.5f)) {
-        int x = (int)points[i].x;
-        int y_start = (int)points[i].y;
-        int y_end   = (int)points[next].y;
-
-        if (y_end < y_start) {
-          int temp = y_start;
-          y_start = y_end;
-          y_end = temp;
-        }
-
-        Uint32 *pixels = (Uint32 *)surface->pixels;
-
-        for (int y = y_start; y <= y_end; ++y) {
-          pixels[y * surface->w + x] = COLOR;
-        }
-      } else {
-        //draw diagonal
-        draw_line((int)points[i].x, (int)points[i].y, (int)points[next].x, (int)points[next].y, surface);
-      }
-    }
-    printf("\n");
-
     q++;
-    SDL_UpdateWindowSurface(window);
+    SDL_Scancode key_code = event->key.scancode;
+    //printf("%u\n", key_code);
+
+    switch (key_code) {
+      case 26:
+        angle = PI / 18.0f; // 10 degrees
+        cos_angle = cosf(angle);
+        sin_angle = sinf(angle);
+        for (int i = 0; i < num_points; i++) {
+          rotateX_around(&points[i], cos_angle, sin_angle, center);
+        }
+        rotate(&num_points, points, surface);
+        break;
+      case 4:
+        angle = PI / 18.0f; // 10 degrees
+        cos_angle = cosf(angle);
+        sin_angle = sinf(angle);
+        for (int i = 0; i < num_points; i++) {
+          rotateY_around(&points[i], cos_angle, sin_angle, center);
+        }
+        rotate(&num_points, points, surface);
+        break;
+      case 22:
+        angle = -PI / 18.0f; // 10 degrees
+        cos_angle = cosf(angle);
+        sin_angle = sinf(angle);
+        for (int i = 0; i < num_points; i++) {
+          rotateX_around(&points[i], cos_angle, sin_angle, center);
+        }
+        rotate(&num_points, points, surface);
+        break;
+      case 7:
+        angle = -PI / 18.0f; // 10 degrees
+        cos_angle = cosf(angle);
+        sin_angle = sinf(angle);
+        for (int i = 0; i < num_points; i++) {
+          rotateY_around(&points[i], cos_angle, sin_angle, center);
+        }
+        rotate(&num_points, points, surface);
+        break;
+      case 20:
+        angle = PI / 18.0f; // 10 degrees
+        cos_angle = cosf(angle);
+        sin_angle = sinf(angle);
+        for (int i = 0; i < num_points; i++) {
+          rotateZ_around(&points[i], cos_angle, sin_angle, center);
+        }
+        rotate(&num_points, points, surface);
+        break;
+      case 8:
+        angle = -PI / 18.0f; // 10 degrees
+        cos_angle = cosf(angle);
+        sin_angle = sinf(angle);
+        for (int i = 0; i < num_points; i++) {
+          rotateZ_around(&points[i], cos_angle, sin_angle, center);
+        }
+        rotate(&num_points, points, surface);
+        break;
+      default:
+        break;
+    }
   }
-  return SDL_APP_CONTINUE;
+return SDL_APP_CONTINUE;
 }
 
