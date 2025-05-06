@@ -3,7 +3,7 @@
 int q;
 
 void initMessage() {
-  printf("\n\n=== %s ===\n", "PRESS [W] [A] [S] [D] KEY!!!");
+  printf("\n\n=== %s ===\n", "PRESS [Q] [W] [E] [A] [S] [D] KEY!!!");
 }
 
 SDL_AppResult SDL_AppIterate(void *appstate){
