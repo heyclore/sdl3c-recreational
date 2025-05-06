@@ -1,4 +1,4 @@
-main='08_rect_rotate.c'
+main='09_grid_field.c'
 exe='exe.exe'
 
 gcc $main dry/sdl_app.c -o $exe \
