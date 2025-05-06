@@ -131,6 +131,7 @@ void rotate_camera_by_degree(double angle_degrees) {
   view_point.x = target_point.x + new_dx;
   view_point.y = target_point.y + new_dy;
   // Keep Z the same
+  init_view(surface);
 }
 
 void check_facing_direction() {
@@ -141,6 +142,26 @@ void check_facing_direction() {
   } else {
     printf("Camera is facing diagonally between X and Y fields.\n");
   }
+}
+
+// Function to move the camera and target forward or backward
+void move_camera_forward_backward(int direction) {
+  double move_amount = direction * CELL_SIZE;
+  target_point.x += camera_dir.x * move_amount;
+  target_point.y += camera_dir.y * move_amount;
+  view_point.x += camera_dir.x * move_amount;
+  view_point.y += camera_dir.y * move_amount;
+  init_view(surface);
+}
+
+// Function to move the camera and target sideways (left or right)
+void move_camera_sideways(int direction) {
+  double move_amount = direction * CELL_SIZE;
+  target_point.x += right.x * move_amount;
+  target_point.y += right.y * move_amount;
+  view_point.x += right.x * move_amount;
+  view_point.y += right.y * move_amount;
+  init_view(surface);
 }
 
 
@@ -158,28 +179,29 @@ SDL_AppResult SDL_AppEvent(void *appstate, SDL_Event *event)
   if (event->type == SDL_EVENT_KEY_DOWN) {
     if(q==0){
       init_view(surface);
-    q++;
+      q++;
     }
     SDL_Scancode key_code = event->key.scancode;
     //printf("%u\n", key_code);
 
     switch (key_code) {
       case 26:
-        check_facing_direction();
+        move_camera_forward_backward(1);
         break;
       case 4:
+        move_camera_sideways(-1);
         break;
       case 22:
+        move_camera_forward_backward(-1);
         break;
       case 7:
+        move_camera_sideways(1);
         break;
       case 20:
         rotate_camera_by_degree(-30.0);
-        init_view(surface);
         break;
       case 8:
         rotate_camera_by_degree(30.0);
-        init_view(surface);
         break;
       default:
         break;
