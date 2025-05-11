@@ -1,4 +1,4 @@
-main='09_grid_field.c'
+main='10_new_grid.c'
 exe='exe.exe'
 
 gcc $main dry/sdl_app.c -o $exe \

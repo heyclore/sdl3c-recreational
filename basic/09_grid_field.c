@@ -1,10 +1,9 @@
 #include "dry/sdl_app.h"
-#include <stdio.h>
 
 int q;
 
 void initMessage() {
-  printf("\n\n=== %s ===\n\n", "CLICK ON SCREEN TO DRAW A PIXEL!!!");
+  printf("\n\n=== %s ===\n", "PRESS [Q] [W] [E] [A] [S] [D] KEY!!!");
 }
 
 SDL_AppResult SDL_AppIterate(void *appstate)
@@ -13,9 +12,6 @@ SDL_AppResult SDL_AppIterate(void *appstate)
   SDL_Delay(66);
   return SDL_APP_CONTINUE;
 }
-
-#include <stdio.h>
-#include <math.h>
 
 // Screen size
 #define SCREEN_WIDTH 640
