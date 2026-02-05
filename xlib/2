@@ -1,0 +1,120 @@
+#include <X11/Xlib.h>
+#include <X11/keysym.h>
+#include <math.h>
+#include <stdlib.h>
+#include <stdio.h>
+
+#define SCREEN_W 800
+#define SCREEN_H 600
+
+double viewAngle = 0.0;
+
+double focalLength = 400;
+double radius = 600.0;
+double wallRealHeight = 500.0;
+
+// Base CMYK colors
+#define CYAN_R 0
+#define CYAN_G 255
+#define CYAN_B 255
+
+#define MAG_R 255
+#define MAG_G 0
+#define MAG_B 255
+
+#define YEL_R 255
+#define YEL_G 255
+#define YEL_B 0
+
+#define BLK_R 128
+#define BLK_G 128
+#define BLK_B 128
+
+
+unsigned long makeColor(int r, int g, int b) {
+    return (r << 16) | (g << 8) | b;
+}
+
+void draw(Display *d, Window w, GC gc) {
+    XClearWindow(d, w);
+
+    double screenCenter = SCREEN_W / 2.0;
+    double lightDir = viewAngle;   // light follows camera
+
+    for (int x = 0; x < SCREEN_W; x++) {
+
+        double angleOffset = atan((x - screenCenter) / focalLength);
+        double rayAngle = viewAngle + angleOffset;
+
+        // Distance to cylindrical wall
+        double dist = radius * cos(angleOffset);
+        double projectedHeight = (wallRealHeight / dist) * focalLength;
+
+        int columnTop = SCREEN_H/2 - projectedHeight/2;
+        int columnBottom = SCREEN_H/2 + projectedHeight/2;
+
+        // Wrap angle to [0,1)
+        double u = fmod(rayAngle, 2*M_PI) / (2*M_PI);
+        if (u < 0) u += 1.0;
+
+        int segment = (int)floor(u * 4.0) % 4;
+
+        int baseR, baseG, baseB;
+
+        switch (segment) {
+            case 0: baseR = CYAN_R; baseG = CYAN_G; baseB = CYAN_B; break;
+            case 1: baseR = MAG_R;  baseG = MAG_G;  baseB = MAG_B;  break;
+            case 2: baseR = YEL_R;  baseG = YEL_G;  baseB = YEL_B;  break;
+            case 3: baseR = BLK_R;  baseG = BLK_G;  baseB = BLK_B;  break;
+        }
+
+        // -------- Lighting (THIS is the new part) --------
+        double brightness = 0.5 + 0.5 * cos(rayAngle - lightDir);
+        if (brightness < 0) brightness = 0;
+        if (brightness > 1) brightness = 1;
+
+        int r = baseR * brightness;
+        int g = baseG * brightness;
+        int b = baseB * brightness;
+
+        unsigned long color = makeColor(r, g, b);
+        XSetForeground(d, gc, color);
+        XDrawLine(d, w, gc, x, columnTop, x, columnBottom);
+    }
+}
+
+int main() {
+    Display *display = XOpenDisplay(NULL);
+    if (!display) exit(1);
+
+    int screen = DefaultScreen(display);
+
+    Window window = XCreateSimpleWindow(
+        display, RootWindow(display, screen),
+        0, 0, SCREEN_W, SCREEN_H, 0, 0, 0);
+
+    XSelectInput(display, window, ExposureMask | KeyPressMask);
+    XMapWindow(display, window);
+
+    GC gc = XCreateGC(display, window, 0, NULL);
+    XEvent e;
+
+    while (1) {
+        XNextEvent(display, &e);
+
+        if (e.type == Expose) draw(display, window, gc);
+
+        if (e.type == KeyPress) {
+            KeySym key = XLookupKeysym(&e.xkey, 0);
+
+            if (key == XK_Escape) break;
+            if (key == XK_a || key == XK_Left) viewAngle -= 0.05;
+            if (key == XK_d || key == XK_Right) viewAngle += 0.05;
+
+            draw(display, window, gc);
+        }
+    }
+
+    XCloseDisplay(display);
+}
+

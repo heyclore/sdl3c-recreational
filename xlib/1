@@ -1,0 +1,82 @@
+#include <X11/Xlib.h>
+#include <X11/keysym.h>
+#include <math.h>
+#include <stdlib.h>
+#include <stdio.h>
+
+#define SCREEN_W 800
+#define SCREEN_H 600
+
+double viewAngle = 0.0;
+
+double focalLength = 400; //double FOV = 1.2; focalLength = (SCREEN_W/2.0) / tan(FOV/2.0);
+double radius = 600.0;    //radius 400–800 = believable room, Small (200),Medium (500),Large (2000)
+double wallRealHeight = 500.0; // wallRealHeight ≈ radius * 0.5
+
+void draw(Display *d, Window w, GC gc) {
+  XClearWindow(d, w);
+
+  double screenCenter = SCREEN_W / 2.0;
+
+  int x = 0;
+  for (x; x < SCREEN_W; x++) {
+
+    double angleOffset = atan((x - screenCenter) / focalLength);
+    double rayAngle = viewAngle + angleOffset;
+
+    // Ray hits cylinder wall
+    double dist = radius * cos(angleOffset);
+
+    double projectedHeight = (wallRealHeight / dist) * focalLength;
+
+    int columnTop = SCREEN_H/2 - projectedHeight/2;
+    int columnBottom = SCREEN_H/2 + projectedHeight/2;
+
+    double u = fmod(rayAngle, 2*M_PI) / (2*M_PI);
+    if (u < 0) u += 1.0;
+
+    unsigned long color = ((int)(u * 20) % 2) ? 0xAAAAAA : 0x444444;
+
+    XSetForeground(d, gc, color);
+    XDrawLine(d, w, gc, x, columnTop, x, columnBottom);
+    if (columnTop > 132)  printf("%d\n",columnTop);
+    if (columnBottom > 533)  printf("%d\n",columnBottom);
+  }
+  //printf("%d\n",x);
+}
+
+int main() {
+  Display *display = XOpenDisplay(NULL);
+  if (!display) exit(1);
+
+  int screen = DefaultScreen(display);
+
+  Window window = XCreateSimpleWindow(
+      display, RootWindow(display, screen),
+      0, 0, SCREEN_W, SCREEN_H, 0, 0, 0);
+
+  XSelectInput(display, window, ExposureMask | KeyPressMask);
+  XMapWindow(display, window);
+
+  GC gc = XCreateGC(display, window, 0, NULL);
+  XEvent e;
+
+  while (1) {
+    XNextEvent(display, &e);
+
+    if (e.type == Expose) draw(display, window, gc);
+
+    if (e.type == KeyPress) {
+      KeySym key = XLookupKeysym(&e.xkey, 0);
+
+      if (key == XK_Escape) break;
+      if (key == XK_a || key == XK_Left) viewAngle -= 0.05;
+      if (key == XK_d || key == XK_Right) viewAngle += 0.05;
+
+      draw(display, window, gc);
+    }
+  }
+
+  XCloseDisplay(display);
+}
+

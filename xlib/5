@@ -1,0 +1,163 @@
+#include <X11/Xlib.h>
+#include <X11/keysym.h>
+#include <math.h>
+#include <stdlib.h>
+#include <stdio.h>
+#include <string.h>
+
+#define SCREEN_W 800
+#define SCREEN_H 600
+
+#define TEX_W 256
+#define TEX_H 256
+
+double viewAngle = 0.0;
+double focalLength = 400;
+double radius = 600.0;
+double wallRealHeight = 500.0;
+
+XImage *screenImg;
+unsigned int *framebuffer;
+
+XImage *wallImg[4];
+unsigned int *wallBuf[4];
+
+unsigned int pack(int r,int g,int b){
+  return (r<<16)|(g<<8)|b;
+}
+
+void buildWallImages(Display *d, int screen) {
+  int depth = DefaultDepth(d, screen);
+
+  for(int w=0; w<4; w++) {
+    wallBuf[w] = malloc(TEX_W * TEX_H * 4);
+
+    wallImg[w] = XCreateImage(
+        d, DefaultVisual(d, screen), depth, ZPixmap,
+        0, (char*)wallBuf[w],
+        TEX_W, TEX_H, 32, 0);
+
+    for (int y=0;y<TEX_H;y++) {
+      for (int x=0;x<TEX_W;x++) {
+
+        double shade = 0.5 + 0.5*((double)y/TEX_H);
+
+        unsigned int color;
+        if (w==0) color = pack(0,   255*shade, 255*shade); // CYAN
+        if (w==1) color = pack(255*shade, 0,   255*shade); // MAGENTA
+        if (w==2) color = pack(255*shade,255*shade,0);     // YELLOW
+        if (w==3) color = pack(128, 128, 128);                     // BLACK
+
+        wallBuf[w][y*TEX_W+x] = color;
+      }
+    }
+  }
+}
+
+void draw(Display *d, Window w, GC gc) {
+
+  double screenCenter = SCREEN_W / 2.0;
+  double lightDir = viewAngle;
+
+  for (int x = 0; x < SCREEN_W; x++) {
+
+    double angleOffset = atan((x - screenCenter) / focalLength);
+    double rayAngle = viewAngle + angleOffset;
+
+    double dist = radius * cos(angleOffset);
+    double projectedHeight = (wallRealHeight / dist) * focalLength;
+
+    int columnTop = SCREEN_H/2 - projectedHeight/2;
+    int columnBottom = SCREEN_H/2 + projectedHeight/2;
+
+    if (columnTop < 0) columnTop = 0;
+    if (columnBottom >= SCREEN_H) columnBottom = SCREEN_H-1;
+
+    double u = fmod(rayAngle, 2*M_PI)/(2*M_PI);
+    if (u < 0) u += 1.0;
+
+    int segment = (int)(u*4.0) % 4;
+    int texX = (int)(u * TEX_W) % TEX_W;
+
+    double brightness = 0.5 + 0.5 * cos(rayAngle - lightDir);
+
+    unsigned int *texData = (unsigned int*)wallImg[segment]->data;
+
+    for (int y = columnTop; y < columnBottom; y++) {
+
+      double v = (double)(y - columnTop)/(columnBottom - columnTop);
+      int texY = (int)(v * TEX_H);
+
+      unsigned int color = texData[texY*TEX_W + texX];
+
+      int r = ((color>>16)&255)*brightness;
+      int g = ((color>>8)&255)*brightness;
+      int b = (color&255)*brightness;
+
+      framebuffer[y*SCREEN_W + x] = (r<<16)|(g<<8)|b;
+    }
+  }
+
+  XPutImage(d, w, gc, screenImg, 0,0,0,0, SCREEN_W, SCREEN_H);
+}
+
+int main() {
+  Display *display = XOpenDisplay(NULL);
+  if (!display) exit(1);
+
+  int screen = DefaultScreen(display);
+
+  Window window = XCreateSimpleWindow(
+      display, RootWindow(display, screen),
+      0, 0, SCREEN_W, SCREEN_H, 0, 0, 0);
+
+  XSelectInput(display, window, ExposureMask | KeyPressMask);
+  XMapWindow(display, window);
+
+  GC gc = XCreateGC(display, window, 0, NULL);
+
+  int depth = DefaultDepth(display, screen);
+  framebuffer = malloc(SCREEN_W * SCREEN_H * 4);
+
+  screenImg = XCreateImage(display,
+      DefaultVisual(display, screen),
+      depth, ZPixmap,
+      0, (char*)framebuffer,
+      SCREEN_W, SCREEN_H, 32, 0);
+
+  buildWallImages(display, screen);
+
+  XEvent e;
+
+  while (1) {
+    XNextEvent(display, &e);
+
+    switch (e.type) {
+      case Expose:
+        draw(display, window, gc);
+        break;
+
+      case KeyPress: 
+        { 
+          KeySym key = XLookupKeysym(&e.xkey, 0);
+
+          if (key == XK_Escape) {
+            XCloseDisplay(display);
+            return 0;
+          }
+
+          if (key == XK_a || key == XK_Left) viewAngle -= 0.05;
+          if (key == XK_d || key == XK_Right) viewAngle += 0.05;
+
+          draw(display, window, gc);
+          break;
+        } 
+
+      default:
+        break;
+    }
+  }
+
+  XCloseDisplay(display);
+}
+
