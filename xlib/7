@@ -1,0 +1,219 @@
+#include <X11/Xlib.h>
+#include <X11/Xutil.h>
+#include <X11/keysym.h>
+#include <math.h>
+#include <stdlib.h>
+#include <stdio.h>
+#include <string.h>
+
+#define SCREEN_W 800
+#define SCREEN_H 600
+#define FOV (M_PI / 3.0)
+#define MAX_DIST 100.0
+#define COARSE_STEP (M_PI/60)  /* coarse scan step, ~3 degrees */
+
+typedef struct {
+    double x;
+    double y;
+    double angle;
+} Camera;
+
+typedef struct {
+    XImage *img;
+    unsigned int *pixels;
+    int w;
+    int h;
+} Framebuffer;
+
+typedef struct {
+    double x;
+    double y;
+    double w;
+    double h;
+} Wall;
+
+Camera cam = {0.0, 0.0, 0.0};
+
+Wall wall = {
+    5.0,   /* x */
+    -1.0,  /* y */
+    0.1,   /* width */
+    2.0    /* height */
+};
+
+Framebuffer fb;
+
+int cast_ray_to_wall(const Wall *w, double ox, double oy, double dx, double dy, double *out_dist) {
+    double xmin = w->x;
+    double xmax = w->x + w->w;
+    double ymin = w->y;
+    double ymax = w->y + w->h;
+
+    double tmin = 0.0;
+    double tmax = MAX_DIST;
+
+    /* X axis */
+    if (fabs(dx) < 1e-6) {
+        if (ox < xmin || ox > xmax)
+            return 0;
+    } else {
+        double tx1 = (xmin - ox) / dx;
+        double tx2 = (xmax - ox) / dx;
+        if (tx1 > tx2) { double tmp = tx1; tx1 = tx2; tx2 = tmp; }
+        if (tx1 > tmin) tmin = tx1;
+        if (tx2 < tmax) tmax = tx2;
+        if (tmin > tmax) return 0;
+    }
+
+    /* Y axis */
+    if (fabs(dy) < 1e-6) {
+        if (oy < ymin || oy > ymax)
+            return 0;
+    } else {
+        double ty1 = (ymin - oy) / dy;
+        double ty2 = (ymax - oy) / dy;
+        if (ty1 > ty2) { double tmp = ty1; ty1 = ty2; ty2 = tmp; }
+        if (ty1 > tmin) tmin = ty1;
+        if (ty2 < tmax) tmax = ty2;
+        if (tmin > tmax) return 0;
+    }
+
+    if (tmin < 0.0)
+        return 0;
+
+    *out_dist = tmin;
+    return 1;
+}
+
+void clear_fb(Framebuffer *fb) {
+    memset(fb->pixels, 0, fb->w * fb->h * sizeof(unsigned int));
+}
+
+/* Coarse FOV scan: returns min/max angles (output via pointers) */
+void coarse_scan_fov(Camera *cam, double *out_min_angle, double *out_max_angle) {
+    double min_a = cam->angle + FOV/2;
+    double max_a = cam->angle - FOV/2;
+    int found = 0;
+
+    for (double a = cam->angle - FOV/2; a <= cam->angle + FOV/2; a += COARSE_STEP) {
+        double dx = cos(a);
+        double dy = sin(a);
+        double dist;
+        if (cast_ray_to_wall(&wall, cam->x, cam->y, dx, dy, &dist)) {
+            if (!found) {
+                min_a = a;
+                max_a = a;
+                found = 1;
+            } else {
+                if (a < min_a) min_a = a;
+                if (a > max_a) max_a = a;
+            }
+        }
+    }
+
+    if (!found) {  // no walls found, fallback to full FOV
+        *out_min_angle = cam->angle - FOV/2;
+        *out_max_angle = cam->angle + FOV/2;
+    } else {
+        *out_min_angle = min_a;
+        *out_max_angle = max_a;
+    }
+}
+
+void draw_walls(Framebuffer *fb, Camera *cam) {
+    double min_a, max_a;
+    coarse_scan_fov(cam, &min_a, &max_a);
+
+    for (int x = 0; x < fb->w; x++) {
+        double a = cam->angle - FOV/2 + (double)x / fb->w * FOV;
+
+        /* Skip columns outside active FOV from coarse scan */
+        if (a < min_a || a > max_a)
+            continue;
+
+        double dx = cos(a);
+        double dy = sin(a);
+
+        double dist;
+        if (cast_ray_to_wall(&wall, cam->x, cam->y, dx, dy, &dist)) {
+            dist *= cos(a - cam->angle);  // remove fish-eye
+            int h = fb->h / (dist + 0.0001);
+            int y0 = (fb->h - h) / 2;
+            int y1 = y0 + h;
+            if (y0 < 0) y0 = 0;
+            if (y1 >= fb->h) y1 = fb->h - 1;
+            for (int y = y0; y <= y1; y++)
+                fb->pixels[y * fb->w + x] = 0xFFFFFF;
+        }
+    }
+}
+
+void present(Display *d, Window w, GC gc, Framebuffer *fb) {
+    XPutImage(d, w, gc, fb->img, 0, 0, 0, 0, fb->w, fb->h);
+}
+
+void draw(Display *d, Window w, GC gc) {
+    clear_fb(&fb);
+    draw_walls(&fb, &cam);
+    present(d, w, gc, &fb);
+}
+
+int main(void) {
+    Display *display = XOpenDisplay(NULL);
+    if (!display) return 1;
+
+    int screen = DefaultScreen(display);
+    Visual *visual = DefaultVisual(display, screen);
+    int depth = DefaultDepth(display, screen);
+
+    Window window = XCreateSimpleWindow(
+        display, RootWindow(display, screen),
+        0, 0, SCREEN_W, SCREEN_H, 0,
+        BlackPixel(display, screen),
+        BlackPixel(display, screen)
+    );
+
+    XSelectInput(display, window, ExposureMask | KeyPressMask);
+    XMapWindow(display, window);
+
+    GC gc = XCreateGC(display, window, 0, NULL);
+
+    fb.w = SCREEN_W;
+    fb.h = SCREEN_H;
+    fb.pixels = calloc(fb.w * fb.h, sizeof(unsigned int));
+    fb.img = XCreateImage(display, visual, depth, ZPixmap, 0, (char *)fb.pixels, fb.w, fb.h, 32, 0);
+
+    XEvent e;
+
+    while (1) {
+        XNextEvent(display, &e);
+
+        if (e.type == Expose) draw(display, window, gc);
+
+        if (e.type == KeyPress) {
+            KeySym key = XLookupKeysym(&e.xkey, 0);
+
+            if (key == XK_Escape) break;
+            if (key == XK_Left)  cam.angle -= 0.1;
+            if (key == XK_Right) cam.angle += 0.1;
+
+            if (key == XK_w) {
+                cam.x += cos(cam.angle) * 0.2;
+                cam.y += sin(cam.angle) * 0.2;
+            }
+            if (key == XK_s) {
+                cam.x -= cos(cam.angle) * 0.2;
+                cam.y -= sin(cam.angle) * 0.2;
+            }
+
+            draw(display, window, gc);
+        }
+    }
+
+    fb.img->data = NULL;   // prevent XDestroyImage from freeing pixels
+XDestroyImage(fb.img);
+free(fb.pixels);
+    XCloseDisplay(display);
+    return 0;
+}
+
