@@ -64,19 +64,32 @@ int main() {
   while (1) {
     XNextEvent(display, &e);
 
-    if (e.type == Expose) draw(display, window, gc);
+    XNextEvent(display, &e);
 
-    if (e.type == KeyPress) {
-      KeySym key = XLookupKeysym(&e.xkey, 0);
+    switch (e.type) {
+      case Expose:
+        draw(display, window, gc);
+        break;
 
-      if (key == XK_Escape) break;
-      if (key == XK_a || key == XK_Left) viewAngle -= 0.05;
-      if (key == XK_d || key == XK_Right) viewAngle += 0.05;
+      case KeyPress: 
+        { 
+          KeySym key = XLookupKeysym(&e.xkey, 0);
 
-      draw(display, window, gc);
+          if (key == XK_Escape) {
+            XCloseDisplay(display);
+            return 0;
+          }
+
+          if (key == XK_a || key == XK_Left) viewAngle -= 0.05;
+          if (key == XK_d || key == XK_Right) viewAngle += 0.05;
+
+          draw(display, window, gc);
+          break;
+        } 
+
+      default:
+        break;
     }
   }
-
-  XCloseDisplay(display);
 }
 
