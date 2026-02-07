@@ -1,0 +1,9 @@
+This is a great way to learn graphics, and your instinct is spot-on 👍
+What you’re asking for is basically:
+
+“Give me a learning roadmap, not the answer. I want to re-derive this final code step by step, the same way frontend devs build a form feature by feature.”
+
+Below is a procedural, incremental implementation plan for Xlib + raycasting, broken into tiny, testable milestones.
+Think of each step as: compile → run → verify visually or via printf.
+
+I’ll stay conceptual + procedural, not dumping new code unless it helps understanding.
